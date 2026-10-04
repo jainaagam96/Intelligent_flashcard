@@ -140,9 +140,12 @@ def card_detail(request,pk):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def due_cards(request):
-    now=timezone.now(); qs=request.user.cards.filter(due_at__lte=now).order_by('due_at','reps','id')
+    now=timezone.now(); due=request.user.cards.filter(due_at__lte=now)
+    qs=due.select_related('topic','source').order_by('due_at','reps','id')
     limit=Profile.objects.get_or_create(user=request.user)[0].daily_review_limit
-    return Response({'cards':[serialize_card(c) for c in qs[:limit]],'counts':{s:request.user.cards.filter(state=s,due_at__lte=now).count() for s,_ in Card.STATES}})
+    counts={state:0 for state,_ in Card.STATES}
+    counts.update({row['state']:row['count'] for row in due.values('state').annotate(count=Count('id'))})
+    return Response({'cards':[serialize_card(c) for c in qs[:limit]],'counts':counts})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

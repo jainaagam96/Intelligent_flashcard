@@ -7,6 +7,10 @@ from .models import Card
 LEARNING_STEPS=[60,300,600]
 RELEARNING_STEPS=[600,3600]
 
+def _openai_client():
+    from openai import OpenAI
+    return OpenAI(api_key=settings.OPENAI_API_KEY,timeout=50.0,max_retries=0)
+
 def extract_file(upload):
     name=(upload.name or '').lower()
     raw=upload.read()
@@ -32,17 +36,19 @@ def _fallback_cards(subject,topic,title,text,count):
 def generate_cards(subject,topic,title,text,count):
     if not settings.OPENAI_API_KEY:
         return _fallback_cards(subject,topic,title,text,count), False
-    from openai import OpenAI
-    client=OpenAI(api_key=settings.OPENAI_API_KEY)
+    client=_openai_client()
     lines=text.splitlines(); numbered='\n'.join(f'{i+1}: {x}' for i,x in enumerate(lines))
     schema={'type':'object','additionalProperties':False,'properties':{'cards':{'type':'array','items':{'type':'object','additionalProperties':False,'properties':{'prompt':{'type':'string'},'answer':{'type':'string'},'line_start':{'type':'integer','minimum':1},'line_end':{'type':'integer','minimum':1}},'required':['prompt','answer','line_start','line_end']}}},'required':['cards']}
     instructions='''You are the upscEasy UPSC Active Recall Generator. Use ONLY the supplied source notes. Do not add outside facts. Create atomic, testable retrieval prompts useful for UPSC Prelims/Mains. Cover definitions, provisions, causes/effects, comparisons, chronology, committees/cases, examples and multi-dimensional points only when supported. Avoid trivial prompts and duplicates. Every answer must be supported by the smallest useful contiguous source line range. Return only the requested JSON schema.'''
-    r=client.responses.create(model=settings.OPENAI_MODEL,instructions=instructions,input=f'Subject: {subject}\nTopic: {topic}\nSource: {title}\nRequested cards: {count}\n\nSOURCE LINES:\n{numbered}',text={'format':{'type':'json_schema','name':'upsc_recall_cards','schema':schema,'strict':True}})
-    data=json.loads(r.output_text); out=[]
-    for c in data.get('cards',[])[:count]:
-        s=max(1,min(len(lines),int(c['line_start']))); e=max(s,min(len(lines),int(c['line_end'])))
-        out.append({'prompt':c['prompt'].strip(),'answer':c['answer'].strip(),'line_start':s,'line_end':e})
-    return out, True
+    try:
+        r=client.responses.create(model=settings.OPENAI_MODEL,instructions=instructions,input=f'Subject: {subject}\nTopic: {topic}\nSource: {title}\nRequested cards: {count}\n\nSOURCE LINES:\n{numbered}',text={'format':{'type':'json_schema','name':'upsc_recall_cards','schema':schema,'strict':True}})
+        data=json.loads(r.output_text); out=[]
+        for c in data.get('cards',[])[:count]:
+            s=max(1,min(len(lines),int(c['line_start']))); e=max(s,min(len(lines),int(c['line_end'])))
+            out.append({'prompt':c['prompt'].strip(),'answer':c['answer'].strip(),'line_start':s,'line_end':e})
+        return out, True
+    except Exception:
+        return _fallback_cards(subject,topic,title,text,count), False
 
 def schedule(card,rating):
     now=timezone.now(); old=card.state; ease=card.ease; step=card.learning_step; interval=card.interval_days
@@ -103,9 +109,8 @@ def evaluate_mains(question, answer, max_marks, answer_upload=None):
         return fallback()
 
     try:
-        from openai import OpenAI
         import base64, mimetypes
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        client = _openai_client()
         schema = {
             'type':'object', 'additionalProperties':False,
             'properties':{
@@ -189,8 +194,7 @@ def evaluate_mains(question, answer, max_marks, answer_upload=None):
         return fallback(f'AI evaluation was unavailable ({type(exc).__name__}{diagnostic}): {detail}. A local evaluation is shown instead.')
 
 def generate_model_answer(question, max_marks):
-    from openai import OpenAI
-    client=OpenAI(api_key=settings.OPENAI_API_KEY)
+    client=_openai_client()
     schema={
         'type':'object','additionalProperties':False,
         'properties':{'answer':{'type':'string'},'demand_summary':{'type':'string'}},

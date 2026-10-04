@@ -2,18 +2,9 @@
 
 This setup runs the Django app on Render and stores its persistent data in your existing Supabase PostgreSQL database. Render's free web service can sleep after 15 minutes without traffic and may take about a minute to wake; its local filesystem is temporary, so keep `DB_URL` pointed at Supabase. The free service is intended for hobby projects and has usage limits.
 
-## 1. Push the project to a private GitHub repository
+## 1. Source repository
 
-This folder is not currently a Git repository. In Terminal on your Mac:
-
-```bash
-cd ~/Desktop/upscEasy-local
-git init
-git add .
-git commit -m "Prepare upscEasy for Render hosting"
-```
-
-Create a **private** GitHub repository, then connect and push this repository using the commands GitHub provides. `.gitignore` excludes `.env`, `db.sqlite3`, and SQLite backups. Check that no secrets or database files are included before pushing.
+The app source is in the [Intelligent_flashcard GitHub repository](https://github.com/jainaagam96/Intelligent_flashcard), on the `main` branch. `.gitignore` excludes `.env`, `db.sqlite3`, and SQLite backups. Never add secret values or database files to Git.
 
 ## 2. Create the Render service
 
@@ -23,7 +14,9 @@ Create a **private** GitHub repository, then connect and push this repository us
 4. When prompted for `OPENAI_API_KEY`, enter your OpenAI API key if you want evaluation and model-answer generation on the hosted site. This is separate from the Supabase database password. Leave it blank if you do not want hosted AI requests.
 5. Apply the Blueprint and wait for the first deployment to finish.
 
-The Blueprint sets `DEBUG=0`, disables public account creation, generates a Django `SECRET_KEY`, runs database migrations and `collectstatic`, and starts the app with Gunicorn. Django uses Render's assigned hostname for allowed hosts and CSRF origins. Your existing account can still sign in; local registration remains enabled.
+If you already created a Web Service manually, update its **Settings → Build & Deploy → Start Command** to `gunicorn upsc_easy.wsgi:application --bind 0.0.0.0:$PORT --timeout 120`. Keep the Root Directory blank. The `render.yaml` command change only updates a Blueprint-managed service.
+
+The Blueprint sets `DEBUG=0`, disables public account creation, generates a Django `SECRET_KEY`, runs database migrations and `collectstatic`, and starts the app with Gunicorn. OpenAI requests have a 50-second client timeout; Gunicorn allows up to 120 seconds for a request so the app can return a fallback or a clear error instead of killing the worker. Django uses Render's assigned hostname for allowed hosts and CSRF origins. Your existing account can still sign in; local registration remains enabled.
 
 ## 3. Open and sign in
 

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: upsceasy
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
+    startCommand: "gunicorn upsc_easy.wsgi:application --bind 0.0.0.0:$PORT"
+    healthCheckPath: /api/health/
+    envVars:
+      - key: DEBUG
+        value: "0"
+      - key: ALLOW_PUBLIC_REGISTRATION
+        value: "0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.5
+      - key: SECURE_SSL_REDIRECT
+        value: "0"

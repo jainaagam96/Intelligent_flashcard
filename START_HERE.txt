@@ -1,0 +1,23 @@
+upscEasy LOCAL MVP v1.1
+=======================
+
+IMPORTANT: If you previously ran an older upscEasy backend, STOP it first with Ctrl+C.
+Then open PowerShell in THIS folder (the folder containing manage.py).
+
+Windows:
+  py -m venv .venv
+  .venv\Scripts\Activate.ps1
+  py -m pip install -r requirements.txt
+  copy .env.example .env
+  py manage.py migrate
+  py manage.py runserver 8000
+
+Open:
+  http://127.0.0.1:8000/
+
+Health check:
+  http://127.0.0.1:8000/api/health/
+
+The root URL is served by Django itself. If your browser still reports a URLconf
+containing only 'api/cards/', you are running the OLD backend, not this package.
+Check that your terminal is in the folder containing this manage.py and runserver.

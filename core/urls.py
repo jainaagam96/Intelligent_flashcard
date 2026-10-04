@@ -1,0 +1,3 @@
+from django.urls import path
+from .views import *
+urlpatterns=[path('health/',health),path('auth/login/',auth_login),path('auth/register/',auth_register),path('auth/logout/',auth_logout),path('auth/me/',auth_me),path('topics/',topics),path('sources/',sources),path('cards/generate/',generate),path('cards/save/',save_cards),path('cards/due/',due_cards),path('cards/',card_list),path('cards/<int:pk>/',card_detail),path('cards/<int:pk>/review/',review),path('dashboard/',dashboard),path('mains/evaluate/',mains),path('mains/model-answer/',mains_model_answer),path('mains/evaluations/',mains_evaluations),path('pyqs/',pyqs),path('exam-mode/',exam_mode),path('knowledge-graph/',knowledge_graph),path('memory/',memory_items),path('analytics/',analytics)]
